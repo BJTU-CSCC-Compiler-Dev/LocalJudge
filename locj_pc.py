@@ -2,7 +2,7 @@ import os.path
 from test_status import TestStatus
 import yaml
 from pathlib import Path
-from common import eprint, fmt_dict, todo
+from common import eprint, fmt_dict, todo, bprint
 from argparse import ArgumentParser, ArgumentError
 import sys
 import typing as typ
@@ -69,14 +69,14 @@ def read_locj_config(locjConfigPath: Path = defaultLocjConfigPath, doCheck: bool
 	assert ssh.exec_command(command=f"{piPyPrefix} {piLocjPath}/hello_world.py")[1].readlines() == ["hello"]
 	# pi-univ-path
 	piUnivPath = locjConfig["pi-univ-path"]
-	assert ssh.exec_command(command=f"cat {piUnivPath}/univ-fingerprint.txt")[1].readlines() == ["univ"]
+	assert ssh.exec_command(command=f"cat {piUnivPath}/univ-fingerprint.txt")[1].readlines() == ["univ\n"]
 	# pc-univ-path
 	pcUnivPath = locjConfig["pc-univ-path"]
 	with open(Path(pcUnivPath) / "univ-fingerprint.txt", "r") as fp:
-		assert fp.readline() == "univ"
+		assert fp.readline() == "univ\n"
 	# pi-tmp-path
 	piTmpPath = locjConfig["pi-tmp-path"]
-	assert ssh.exec_command(command=f"test -d {piTmpPath} && echo y || echo n")[1] == "y"
+	assert ssh.exec_command(command=f"test -d {piTmpPath} && echo y || echo n")[1].readlines() == ["y\n"]
 	# pc-tmp-path
 	pcTmpPath = locjConfig["pc-tmp-path"]
 	assert Path(pcTmpPath).is_dir()
@@ -107,7 +107,7 @@ def judge_test_case_single(
 	piUsername: str = locjConfig["pi-username"]
 	piPyPrefix = locjConfig["pi-py-prefix"]
 	piLocjPath = Path(locjConfig["pi-locj-path"])
-	caExe = caExe if caExe is None else locjConfig["ca-exe"]
+	caExe = caExe if caExe is not None else locjConfig["ca-exe"]
 	# ssh to pi
 	ssh = paramiko.SSHClient()
 	ssh.load_host_keys(os.path.expanduser(Path.home() / ".ssh/known_hosts"))
@@ -122,16 +122,20 @@ def judge_test_case_single(
 	pcTcSrcPath = pcTcPath / f"{tcName}.{extName}"
 	pcTcInPath = pcTcPath / f"{tcName}.in"
 	pcTcAnsPath = pcTcPath / f"{tcName}.ans"
+	pcTcInfoPath = pcTcPath / "info.yaml"
 	assert pcTcSrcPath.exists()
 	assert pcTcInPath.exists()
 	assert pcTcAnsPath.exists()
+	assert pcTcInfoPath.exists()
 	piTcPath = piTmpPath
 	piTcSrcPath = piTcPath / f"{tcName}.{extName}"
 	piTcInPath = piTcPath / f"{tcName}.in"
 	piTcAnsPath = piTcPath / f"{tcName}.ans"
+	piTcInfoPath = piTcPath / "info.yaml"
 	sftp.put(localpath=str(pcTcSrcPath), remotepath=str(piTcSrcPath))
 	sftp.put(localpath=str(pcTcInPath), remotepath=str(piTcInPath))
 	sftp.put(localpath=str(pcTcAnsPath), remotepath=str(piTcAnsPath))
+	sftp.put(localpath=str(pcTcInfoPath), remotepath=str(piTcInfoPath))
 	# compile and assemble on pc
 	cargs += [str(pcTcSrcPath), "-o", f"{pcTmpPath}/{tcName}.S"]
 	try:
@@ -162,8 +166,9 @@ def judge_test_case_single(
 	pcTcResultPath = pcTmpPath / "tc-result.yaml"
 	tcRes = dict()
 	if resStatus == TestStatus.AC:
-		ssh.exec_command(
+		ret = ssh.exec_command(
 			command=f"{piPyPrefix} {piLocjPath / 'locj_pi.py'} --info {piTcInfoPath} --result {piTcResultPath}")
+		bprint(ret[0].readlines(), ret[1].readlines(), ret[2].readlines())
 		sftp.get(str(piTcResultPath), str(pcTcResultPath))
 		with open(pcTcResultPath, "r") as fp:
 			tcRes: typ.Dict = yaml.safe_load(fp)
