@@ -29,7 +29,7 @@ if __name__ == '__main__':
 	try:
 		with open(f"{tcPath}/{tcName}.in", "r") as fin:
 			with open(f"{tcPath}/{tcName}.out", "w") as fout:
-				os.chmod(exePath, stat.S_IXUSR | stat.S_IWUSR)
+				os.chmod(exePath, stat.S_IXUSR | stat.S_IWUSR | stat.S_IRUSR)
 				spRet = sp.run(exePath, stdin=fin, stdout=fout, timeout=ttl)
 		stderr = spRet.stderr
 		with open(f"{tcPath}/{tcName}.out", "w+") as fp:
