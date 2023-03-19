@@ -26,7 +26,9 @@ if __name__ == '__main__':
 	out = None
 	ans = None
 	try:
-		spRet = sp.run([exePath], stdin=f"{tcPath}/{tcName}.in", stdout=f"{tcPath}/{tcName}.out", timeout=ttl)
+		with open(f"{tcPath}/{tcName}.in", "r") as fin:
+			with open(f"{tcPath}/{tcName}.out", "w") as fout:
+				spRet = sp.run(exePath, stdin=fin, stdout=fout, timeout=ttl)
 		stderr = spRet.stderr
 		with open(tcPath / f"{tcName}.out", "w+") as fp:
 			fp.write(f"\n{spRet.returncode}")
