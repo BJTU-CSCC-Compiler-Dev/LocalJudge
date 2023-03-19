@@ -69,7 +69,7 @@ def read_locj_config(locjConfigPath: Path = defaultLocjConfigPath, doCheck: bool
 	assert ssh.exec_command(command=f"{piPyPrefix} {piLocjPath}/hello_world.py")[1].readlines() == ["hello"]
 	# pi-univ-path
 	piUnivPath = locjConfig["pi-univ-path"]
-	assert ssh.exec_command(command=f"cat {piUnivPath}/univ-fingerprint.txt")[1] == "univ"
+	assert ssh.exec_command(command=f"cat {piUnivPath}/univ-fingerprint.txt")[1].readlines() == ["univ"]
 	# pc-univ-path
 	pcUnivPath = locjConfig["pc-univ-path"]
 	with open(Path(pcUnivPath) / "univ-fingerprint.txt", "r") as fp:
