@@ -32,11 +32,11 @@ if __name__ == '__main__':
 				os.chmod(exePath, stat.S_IXUSR)
 				spRet = sp.run(exePath, stdin=fin, stdout=fout, timeout=ttl)
 		stderr = spRet.stderr
-		with open(tcPath / f"{tcName}.out", "w+") as fp:
+		with open(f"{tcPath}/{tcName}.out", "w+") as fp:
 			fp.write(f"\n{spRet.returncode}")
-		with open(tcPath / f"{tcName}.out", "r") as fp:
+		with open(f"{tcPath}/{tcName}.out", "r") as fp:
 			out = fp.readlines()
-		with open(tcPath / f"{tcName}.ans", "r") as fp:
+		with open(f"{tcPath}/{tcName}.ans", "r") as fp:
 			ans = fp.readlines()
 		if out == ans:
 			resStatus = TestStatus.AC
