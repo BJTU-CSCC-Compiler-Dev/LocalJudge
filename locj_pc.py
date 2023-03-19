@@ -63,10 +63,10 @@ def read_locj_config(locjConfigPath: Path = defaultLocjConfigPath, doCheck: bool
 	ssh.connect(hostname=piHostName, username=piUsername, password=piPassword)
 	# pi-locj-path
 	piLocjPath: str = locjConfig["pi-locj-path"]
-	assert ssh.exec_command(command=f"cat {piLocjPath}/locj-fingerprint.txt")[1] == "local-judge"
+	assert ssh.exec_command(command=f"cat {piLocjPath}/locj-fingerprint.txt")[1].readlines() == ["local-judge"]
 	# pi-py-prefix
 	piPyPrefix = locjConfig["pi-py-prefix"]
-	assert ssh.exec_command(command=f"{piPyPrefix} {piLocjPath}/hello_world.py")[1] == "hello"
+	assert ssh.exec_command(command=f"{piPyPrefix} {piLocjPath}/hello_world.py")[1].readlines() == ["hello"]
 	# pi-univ-path
 	piUnivPath = locjConfig["pi-univ-path"]
 	assert ssh.exec_command(command=f"cat {piUnivPath}/univ-fingerprint.txt")[1] == "univ"

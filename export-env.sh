@@ -1,0 +1,1 @@
+conda env export -n bjtu-cscc-compiler | sed '/^prefix/d' > env.yaml
