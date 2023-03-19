@@ -19,14 +19,14 @@ if __name__ == '__main__':
 	tcPath = testInfo["test-case-path"]
 	ttl = testInfo["ttl"]
 	exePath = testInfo["exe-path"]
-	with open(tcPath, "r") as fp:
+	with open(f"{tcPath}/info.yaml", "r") as fp:
 		tcInfo = yaml.safe_load(fp)
 	tcName = tcInfo["case-name"]
 	stderr = ""
 	out = None
 	ans = None
 	try:
-		spRet = sp.run([exePath], stdin=tcPath / f"{tcName}.in", stdout=tcPath / f"{tcName}.out", timeout=ttl)
+		spRet = sp.run([exePath], stdin=f"{tcPath}/{tcName}.in", stdout=f"{tcPath}/{tcName}.out", timeout=ttl)
 		stderr = spRet.stderr
 		with open(tcPath / f"{tcName}.out", "w+") as fp:
 			fp.write(f"\n{spRet.returncode}")
