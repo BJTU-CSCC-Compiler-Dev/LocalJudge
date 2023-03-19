@@ -5,6 +5,7 @@ import subprocess as sp
 from subprocess import TimeoutExpired
 import yaml
 from test_status import TestStatus
+import os, sys, stat
 
 argParser = ArgumentParser(prog="locj-pi")
 argParser.add_argument("--info", action="store")
@@ -28,6 +29,7 @@ if __name__ == '__main__':
 	try:
 		with open(f"{tcPath}/{tcName}.in", "r") as fin:
 			with open(f"{tcPath}/{tcName}.out", "w") as fout:
+				os.chmod(exePath, stat.S_IXUSR)
 				spRet = sp.run(exePath, stdin=fin, stdout=fout, timeout=ttl)
 		stderr = spRet.stderr
 		with open(tcPath / f"{tcName}.out", "w+") as fp:
