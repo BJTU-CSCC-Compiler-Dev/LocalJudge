@@ -30,7 +30,7 @@ if __name__ == '__main__':
 				spRet = sp.run(f"{tcPath}/{tcName}", stdin=fin, stdout=fout, timeout=ttl)
 		stderr = spRet.stderr
 		with open(f"{tcPath}/{tcName}.out", "w+") as fp:
-			fp.write(f"\n{spRet.returncode}")
+			fp.write(f"{spRet.returncode}")
 		with open(f"{tcPath}/{tcName}.out", "r") as fp:
 			out = fp.readlines()
 		with open(f"{tcPath}/{tcName}.ans", "r") as fp:

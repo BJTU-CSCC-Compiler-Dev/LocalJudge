@@ -172,8 +172,7 @@ def judge_test_case(
 		cargs: typ.List[str],
 		isSingle: bool, isUniv: bool,
 		tsConfig: typ.Optional[typ.Dict] = None,
-		caExe: typ.Optional[typ.List[str]] = None,
-):
+		caExe: typ.Optional[typ.List[str]] = None):
 	# load some info from locjConfig
 	extName: str = locjConfig["src-ext-name"]
 	piTmpPath: Path = Path(locjConfig["pi-tmp-path"])
@@ -209,6 +208,15 @@ def judge_test_case(
 	return tcRes
 
 
+def judge_test_suite(
+		pcTsPath: Path,
+		locjConfig: typ.Dict,
+		cargs: typ.List[str],
+		isSingle: bool, isUniv: bool,
+		caExe: typ.Optional[typ.List[str]] = None):
+	tsConfig: typ.Optional[typ.Dict] = None
+
+
 argParser = ArgumentParser(prog="locj_pc")
 argParser.add_argument("--univ", action="store_true", default=False, help="Univ test.")
 argParser.add_argument("--single", action="store_true", default=False, help="Single test.")
@@ -224,7 +232,7 @@ def main():
 	cargs = eval(args.cargs)
 	check_legal_cargs(cargs)
 	if is_test_suite_yaml(path):
-		pass
+		todo()
 	elif is_test_case_folder(path):
 		if args.single:
 			tcRes = judge_test_case(path, locjConfig, cargs, True, False)
