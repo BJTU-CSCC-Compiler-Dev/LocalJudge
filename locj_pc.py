@@ -2,7 +2,7 @@ import os.path
 from test_status import TestStatus
 import yaml
 from pathlib import Path
-from common import eprint, fmt_dict, todo, bprint
+from common import eprint, fmt_dict, todo, bprint, panic
 from argparse import ArgumentParser, ArgumentError
 import sys
 import typing as typ
@@ -90,35 +90,44 @@ def read_locj_config(locjConfigPath: Path = defaultLocjConfigPath, doCheck: bool
 	return locjConfig
 
 
-def judge_test_case_single(
-		pcTcPath: Path,
-		locjConfig: typ.Dict,
-		cargs: typ.List[str],
-		tsConfig: typ.Optional[typ.Dict] = None,
-		caExe: typ.Optional[typ.List[str]] = None
-):
+def gen_exe(
+		pcTcPath: Path, tcName: str,
+		tctl: int, extName: str, cargs: typ.List[str], caExe: typ.List[str],
+		ssh: paramiko.client.SSHClient, sftp: paramiko.sftp_client.SFTPClient):
+	"""
+	Called after data (.in, .ans, ...) prepared.
+	"""
 	resStatus = TestStatus.AC
-	stderr = ""
-	# load some info from locjConfig
-	extName: str = locjConfig["src-ext-name"]
-	pcTmpPath: Path = Path(locjConfig["pc-tmp-path"])
-	piTmpPath: Path = Path(locjConfig["pi-tmp-path"])
-	piHostName: str = locjConfig["pi-hostname"]
-	piUsername: str = locjConfig["pi-username"]
-	piPyPrefix = locjConfig["pi-py-prefix"]
-	piLocjPath = Path(locjConfig["pi-locj-path"])
-	caExe = caExe if caExe is not None else locjConfig["ca-exe"]
-	# ssh to pi
-	ssh = paramiko.SSHClient()
-	ssh.load_host_keys(os.path.expanduser(Path.home() / ".ssh/known_hosts"))
-	ssh.connect(hostname=piHostName, username=piUsername)
-	sftp = ssh.open_sftp()
-	# load tcConfig
-	with open(pcTcPath / "info.yaml", "r") as fp:
-		tcConfig: typ.Dict = yaml.safe_load(fp)
-	tcName: str = tcConfig["case-name"]
-	tctl, ttl = get_tctl_and_ttl(locjConfig, tsConfig, tcConfig)
-	# transfer .c, .in, .ans files
+	stderr = str()
+	cargs = cargs + [f"{pcTcPath}/{tcName}.{extName}", "-o", f"{pcTcPath}/{tcName}.S"]
+	try:
+		spRet = sp.run(cargs, cwd=Path.cwd(), timeout=tctl / 1000)
+		resStatus = TestStatus.TCE if spRet.returncode != 0 else resStatus
+		stderr = spRet.stderr
+	except TimeoutExpired:
+		resStatus = TestStatus.TCTLE
+	if resStatus == TestStatus.AC:
+		caExe = caExe + [f"{pcTcPath}/{tcName}.S", "-o", f"{pcTcPath}/{tcName}"]
+		spRet = sp.run(caExe, cwd=Path.cwd())
+		resStatus = TestStatus.TLKE if spRet.returncode != 0 else resStatus
+		stderr = spRet.stderr
+	return resStatus, stderr
+
+
+def run_wrapper_and_get_res(
+		piTcPath: Path, pcTcPath: Path, ttl: int,
+		piPyPrefix: str, piLocjPath: Path,
+		ssh: paramiko.client.SSHClient, sftp: paramiko.sftp_client.SFTPClient):
+	ssh.exec_command(command=f"{piPyPrefix} {piLocjPath}/wrapper.py --tcPath {piTcPath} --ttl {ttl}")
+	sftp.get(f"{piTcPath}/testResInfo.yaml", f"{pcTcPath}/testResInfo.yaml")
+	with open(f"{pcTcPath}/testResInfo.yaml", "r") as fp:
+		tcRes: typ.Dict = yaml.safe_load(fp)
+	return tcRes
+
+
+def transfer_single_test_case(
+		tcName: str, extName: str, piTcPath: Path, pcTcPath: Path,
+		sftp: paramiko.sftp_client.SFTPClient):
 	pcTcSrcPath = pcTcPath / f"{tcName}.{extName}"
 	pcTcInPath = pcTcPath / f"{tcName}.in"
 	pcTcAnsPath = pcTcPath / f"{tcName}.ans"
@@ -127,7 +136,6 @@ def judge_test_case_single(
 	assert pcTcInPath.exists()
 	assert pcTcAnsPath.exists()
 	assert pcTcInfoPath.exists()
-	piTcPath = piTmpPath
 	piTcSrcPath = piTcPath / f"{tcName}.{extName}"
 	piTcInPath = piTcPath / f"{tcName}.in"
 	piTcAnsPath = piTcPath / f"{tcName}.ans"
@@ -136,48 +144,65 @@ def judge_test_case_single(
 	sftp.put(localpath=str(pcTcInPath), remotepath=str(piTcInPath))
 	sftp.put(localpath=str(pcTcAnsPath), remotepath=str(piTcAnsPath))
 	sftp.put(localpath=str(pcTcInfoPath), remotepath=str(piTcInfoPath))
+
+
+def ssh_to_pi(locjConfig: typ.Dict):
+	ssh = paramiko.SSHClient()
+	ssh.load_host_keys(os.path.expanduser(Path.home() / ".ssh/known_hosts"))
+	ssh.connect(
+		hostname=locjConfig["pi-hostname"], username=locjConfig["pi-username"],
+		password=locjConfig.setdefault("pi-password", None))
+	sftp = ssh.open_sftp()
+	return ssh, sftp
+
+
+def get_pi_tc_path(isSingle: bool, isUniv: bool, piTmpPath: Path, pcTcPath: Path, piUnivPath: Path, pcUnivPath: Path):
+	if isSingle:
+		return piTmpPath
+	elif isUniv:
+		return piUnivPath / pcTcPath.relative_to(pcUnivPath)
+	else:
+		panic()
+
+
+def judge_test_case(
+		pcTcPath: Path,
+		locjConfig: typ.Dict,
+		cargs: typ.List[str],
+		isSingle: bool, isUniv: bool,
+		tsConfig: typ.Optional[typ.Dict] = None,
+		caExe: typ.Optional[typ.List[str]] = None,
+):
+	# load some info from locjConfig
+	extName: str = locjConfig["src-ext-name"]
+	piTmpPath: Path = Path(locjConfig["pi-tmp-path"])
+	piPyPrefix: str = locjConfig["pi-py-prefix"]
+	piLocjPath: Path = Path(locjConfig["pi-locj-path"])
+	piUnivPath: Path = Path(locjConfig["pi-univ-path"])
+	pcUnivPath: Path = Path(locjConfig["pc-univ-path"])
+	caExe = caExe if caExe is not None else locjConfig["ca-exe"]
+	# ssh to pi
+	ssh, sftp = ssh_to_pi(locjConfig)
+	# load tcConfig
+	with open(pcTcPath / "info.yaml", "r") as fp:
+		tcConfig: typ.Dict = yaml.safe_load(fp)
+	tcName: str = tcConfig["case-name"]
+	tctl, ttl = get_tctl_and_ttl(locjConfig, tsConfig, tcConfig)
+	# generate piTcPath info and transfer files (if needed)
+	piTcPath = get_pi_tc_path(isSingle, isUniv, piTmpPath, pcTcPath, pcUnivPath, piUnivPath)
+	if isSingle:
+		transfer_single_test_case(tcName, extName, piTcPath, pcTcPath, sftp)
 	# compile and assemble on pc
-	cargs += [str(pcTcSrcPath), "-o", f"{pcTmpPath}/{tcName}.S"]
-	try:
-		spRet = sp.run(cargs, cwd=Path.cwd(), timeout=tctl / 1000)
-		resStatus = TestStatus.TCE if spRet.returncode != 0 else resStatus
-		stderr = spRet.stderr
-	except TimeoutExpired:
-		resStatus = TestStatus.TCTLE
-	if resStatus == TestStatus.AC:
-		caExe += [f"{pcTmpPath}/{tcName}.S", "-o", f"{pcTmpPath}/{tcName}"]
-		spRet = sp.run(caExe, cwd=Path.cwd())
-		resStatus = TestStatus.TLKE if spRet.returncode != 0 else resStatus
-		stderr = spRet.stderr
-	# collect tc-info and transfer tc-info.yaml file
-	tcInfo = dict()
-	tcInfo["test-case-path"] = str(piTcPath)
-	tcInfo["ttl"] = ttl
-	tcInfo["exe-path"] = f"{piTmpPath}/{tcName}"
-	pcTcInfoPath = pcTmpPath / "tc-info.yaml"
-	piTcInfoPath = piTmpPath / "tc-info.yaml"
-	with open(pcTcInfoPath, "w") as fp:
-		yaml.safe_dump(data=tcInfo, stream=fp)
-	if resStatus == TestStatus.AC:
-		sftp.put(str(pcTcInfoPath), str(piTcInfoPath))
-		sftp.put(f"{pcTmpPath}/{tcName}", f"{piTmpPath}/{tcName}")
+	resStatus, stderr = gen_exe(pcTcPath, tcName, tctl, extName, cargs, caExe, ssh, sftp)
 	# run test
-	piTcResultPath = piTmpPath / "tc-result.yaml"
-	pcTcResultPath = pcTmpPath / "tc-result.yaml"
-	tcRes = dict()
 	if resStatus == TestStatus.AC:
-		ret = ssh.exec_command(
-			command=f"{piPyPrefix} {piLocjPath / 'locj_pi.py'} --info {piTcInfoPath} --result {piTcResultPath}")
-		bprint(ret[0].readlines(), ret[1].readlines(), ret[2].readlines())
-		sftp.get(str(piTcResultPath), str(pcTcResultPath))
-		with open(pcTcResultPath, "r") as fp:
-			tcRes: typ.Dict = yaml.safe_load(fp)
+		tcRes = run_wrapper_and_get_res(piTcPath, pcTcPath, ttl, piPyPrefix, piLocjPath, ssh, sftp)
 	else:
 		tcRes = {
 			"test-status": resStatus.value,
 			"stderr": stderr,
 		}
-	# collect tc-result and
+	# collect tc-result and return
 	sftp.close()
 	ssh.close()
 	return tcRes
@@ -201,7 +226,8 @@ def main():
 		pass
 	elif is_test_case_folder(path):
 		if args.single:
-			tcRes = judge_test_case_single(path, locjConfig, cargs)
+			tcRes = judge_test_case(path, locjConfig, cargs, True, False)
+			print(tcRes)
 		else:
 			todo()
 	else:

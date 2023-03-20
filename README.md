@@ -35,8 +35,8 @@ LocalJudge将每一个测试称为测试例（test case），将一系列测试�
 | Compile T.c to T.s with your compiler |                                  | TCE = Test program Compile Error<br />TCTLE = Test program Compile Time Limit Exceeded |
 | Send T.s to Pi                        |                                  | UKE = UnKnown Error                                          |
 |                                       | Assemble T.s and link with `gcc` | TLKE = Test program LinK Error                               |
-|                                       | Run `T.c`                        | TTLE = Test program Time Limit Exceeded                      |
-|                                       | Compare `T.out` and `T.ans`      | TRE = Test program Runtime Error<br />TWA = Test program Wrong Answer |
+|                                       | Run `T.c`                        | TTLE = Test Time Limit Exceeded                              |
+|                                       | Compare `T.out` and `T.ans`      | TRE = Test Runtime Error<br />TWA = TestWrong Answer         |
 |                                       | Return `AC`                      |                                                              |
 
 最后会将运行状态（包括时间等）返回、统计。

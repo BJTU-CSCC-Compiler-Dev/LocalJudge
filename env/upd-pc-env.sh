@@ -1,1 +1,1 @@
-((conda env list | grep "bjtu-cscc-compiler") && conda env update -n bjtu-cscc-compiler -f env.yaml) || conda env create -n bjtu-cscc-compiler -f env.yaml
+( (conda env list | grep "bjtu-cscc-compiler") && conda env update -n bjtu-cscc-compiler -f env/pc-env.yaml) || conda env create -n bjtu-cscc-compiler -f env/pc-env.yaml
