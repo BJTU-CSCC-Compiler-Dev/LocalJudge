@@ -14,8 +14,8 @@ defaultLocjConfigPath = Path.home() / Path(".config/CSCC2023-BJTU/LocJ.yaml")
 locjFingerprintContent = "local-judge"
 
 
-def is_test_suite_yaml(path: Path):
-	return path.is_file() and path.suffix == ".yaml"
+def is_test_suite_folder(path: Path):
+	return path.is_dir() and (path / Path("tsInfo.yaml")).exists()
 
 
 def is_test_case_folder(path: Path):
@@ -216,13 +216,17 @@ def judge_test_suite(
 		cargs: typ.List[str],
 		isSingle: bool, isUniv: bool,
 		caExe: typ.Optional[typ.List[str]] = None):
-	with open(pcTsPath / "tsConfig.yaml", "r") as fp:
+	with open(pcTsPath / "tsInfo.yaml", "r") as fp:
 		tsConfig: typ.Dict = yaml.safe_load(fp)
 	tcPaths: typ.List[str] = tsConfig["test-cases"]
-	tsRes = typ.List[typ.Dict] = list()
+	tsRes: typ.List[typ.Dict] = list()
 	for pcTcPath in tcPaths:
+		pcTcPath: Path = Path(pcTcPath)
+		if not pcTcPath.is_absolute():
+			pcTcPath = pcTsPath / pcTcPath
 		tcRes = judge_test_case(Path(pcTcPath), locjConfig, cargs, isSingle, isUniv, tsConfig, caExe)
 		tsRes.append(tcRes)
+	return tsRes
 
 
 argParser = ArgumentParser(prog="locj_pc")
@@ -238,15 +242,15 @@ def main():
 	assert (args.univ ^ args.single)
 	path = Path(args.path)
 	cargs = eval(args.cargs)
+	isSingle = args.single
+	isUniv = args.univ
 	check_legal_cargs(cargs)
-	if is_test_suite_yaml(path):
-		todo()
+	if is_test_suite_folder(path):
+		tsRes = judge_test_suite(path, locjConfig, cargs, isSingle, isUniv)
+		print(tsRes)
 	elif is_test_case_folder(path):
-		if args.single:
-			tcRes = judge_test_case(path, locjConfig, cargs, True, False)
-			print(tcRes)
-		else:
-			todo()
+		tcRes = judge_test_case(path, locjConfig, cargs, isSingle, isUniv)
+		print(tcRes)
 	else:
 		raise ArgumentError(message=f"Path [{path}] is not test suite nor test case!", argument=None)
 

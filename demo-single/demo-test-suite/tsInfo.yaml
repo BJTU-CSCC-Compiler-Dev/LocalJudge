@@ -1,0 +1,4 @@
+suite-name: demo
+test-cases:
+  - demo-test-case-1
+  - demo-test-case-2

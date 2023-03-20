@@ -1,6 +1,9 @@
 demo-test-case/*
+demo-test-suite/demo-test-case-1/*
+demo-test-suite/demo-test-case-2/*
+
 !.gitignore
 !*.sy
 !*.in
 !*.ans
-!**/tcInfo.yaml
+!tcInfo.yaml

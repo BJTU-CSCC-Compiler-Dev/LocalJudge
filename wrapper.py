@@ -28,7 +28,7 @@ if __name__ == '__main__':
 			with open(f"{tcPath}/{tcName}.out", "w") as fout:
 				os.chmod(f"{tcPath}/{tcName}", stat.S_IXUSR | stat.S_IWUSR | stat.S_IRUSR)
 				spRet = sp.run(f"{tcPath}/{tcName}", stdin=fin, stdout=fout, timeout=ttl)
-		stderr = spRet.stderr
+		stderr = "" if spRet.stderr is None else spRet.stderr
 		with open(f"{tcPath}/{tcName}.out", "w+") as fp:
 			fp.write(f"{spRet.returncode}")
 		with open(f"{tcPath}/{tcName}.out", "r") as fp:
