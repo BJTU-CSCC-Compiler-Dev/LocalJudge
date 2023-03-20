@@ -226,6 +226,11 @@ def judge_test_suite(
 			pcTcPath = pcTsPath / pcTcPath
 		tcRes = judge_test_case(Path(pcTcPath), locjConfig, cargs, isSingle, isUniv, tsConfig, caExe)
 		tsRes.append(tcRes)
+	with open(pcTsPath / "testResInfo.yaml", "w") as fp:
+		tsRes: typ.Dict = {
+			"res-list": tsRes
+		}
+		yaml.safe_dump(tsRes, fp)
 	return tsRes
 
 
