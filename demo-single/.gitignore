@@ -1,6 +1,6 @@
-*
+demo-test-case/*
 !.gitignore
 !*.sy
 !*.in
 !*.ans
-!/**/tcInfo.yaml
+!**/tcInfo.yaml
