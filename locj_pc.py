@@ -119,7 +119,9 @@ def run_wrapper_and_get_res(
 		piTcPath: Path, pcTcPath: Path, ttl: int,
 		piPyPrefix: str, piLocjPath: Path,
 		ssh: paramiko.client.SSHClient, sftp: paramiko.sftp_client.SFTPClient):
-	ssh.exec_command(command=f"{piPyPrefix} {piLocjPath}/wrapper.py --tcPath {piTcPath} --ttl {ttl}")
+	stdin, stdout, stderr = ssh.exec_command(
+		command=f"{piPyPrefix} {piLocjPath}/wrapper.py --tcPath {piTcPath} --ttl {ttl}")
+	# eprint(stderr.readlines())
 	sftp.get(f"{piTcPath}/testResInfo.yaml", f"{pcTcPath}/testResInfo.yaml")
 	with open(f"{pcTcPath}/testResInfo.yaml", "r") as fp:
 		tcRes: typ.Dict = yaml.safe_load(fp)

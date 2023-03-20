@@ -14,7 +14,7 @@ argParser.add_argument("--ttl", action="store", required=True)
 if __name__ == '__main__':
 	args = argParser.parse_args(sys.argv[1:])
 	tcPath = args.tcPath
-	ttl = args.ttl
+	ttl = int(args.ttl)
 	assert Path(tcPath).exists()
 	# load tcInfo and read info
 	with open(f"{tcPath}/tcInfo.yaml", "r") as fp:
