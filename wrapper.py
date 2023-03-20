@@ -45,9 +45,11 @@ if __name__ == '__main__':
 		"test-status": resStatus.value,
 		"stderr": stderr,
 	}
-	if out is not None:
-		testResInfo["out"] = out
-	if ans is not None:
-		testResInfo["ans"] = ans
+	# noinspection PyUnreachableCode
+	if False:
+		if out is not None:
+			testResInfo["out"] = out
+		if ans is not None:
+			testResInfo["ans"] = ans
 	with open(f"{tcPath}/testResInfo.yaml", "w") as fp:
 		fp.write(yaml.safe_dump(testResInfo, indent=4))
