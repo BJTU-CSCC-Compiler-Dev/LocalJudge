@@ -19,7 +19,7 @@ def is_test_suite_yaml(path: Path):
 
 
 def is_test_case_folder(path: Path):
-	return path.is_dir() and (path / Path("info.yaml")).exists()
+	return path.is_dir() and (path / Path("tcInfo.yaml")).exists()
 
 
 def check_legal_cargs(cargs):
@@ -91,7 +91,7 @@ def read_locj_config(locjConfigPath: Path = defaultLocjConfigPath, doCheck: bool
 
 
 def gen_exe(
-		pcTcPath: Path, tcName: str,
+		piTcPath: Path, pcTcPath: Path, tcName: str,
 		tctl: int, extName: str, cargs: typ.List[str], caExe: typ.List[str],
 		ssh: paramiko.client.SSHClient, sftp: paramiko.sftp_client.SFTPClient):
 	"""
@@ -111,6 +111,7 @@ def gen_exe(
 		spRet = sp.run(caExe, cwd=Path.cwd())
 		resStatus = TestStatus.TLKE if spRet.returncode != 0 else resStatus
 		stderr = spRet.stderr
+	sftp.put(f"{pcTcPath}/{tcName}", f"{piTcPath}/{tcName}")
 	return resStatus, stderr
 
 
@@ -131,7 +132,7 @@ def transfer_single_test_case(
 	pcTcSrcPath = pcTcPath / f"{tcName}.{extName}"
 	pcTcInPath = pcTcPath / f"{tcName}.in"
 	pcTcAnsPath = pcTcPath / f"{tcName}.ans"
-	pcTcInfoPath = pcTcPath / "info.yaml"
+	pcTcInfoPath = pcTcPath / "tcInfo.yaml"
 	assert pcTcSrcPath.exists()
 	assert pcTcInPath.exists()
 	assert pcTcAnsPath.exists()
@@ -139,7 +140,7 @@ def transfer_single_test_case(
 	piTcSrcPath = piTcPath / f"{tcName}.{extName}"
 	piTcInPath = piTcPath / f"{tcName}.in"
 	piTcAnsPath = piTcPath / f"{tcName}.ans"
-	piTcInfoPath = piTcPath / "info.yaml"
+	piTcInfoPath = piTcPath / "tcInfo.yaml"
 	sftp.put(localpath=str(pcTcSrcPath), remotepath=str(piTcSrcPath))
 	sftp.put(localpath=str(pcTcInPath), remotepath=str(piTcInPath))
 	sftp.put(localpath=str(pcTcAnsPath), remotepath=str(piTcAnsPath))
@@ -184,7 +185,7 @@ def judge_test_case(
 	# ssh to pi
 	ssh, sftp = ssh_to_pi(locjConfig)
 	# load tcConfig
-	with open(pcTcPath / "info.yaml", "r") as fp:
+	with open(pcTcPath / "tcInfo.yaml", "r") as fp:
 		tcConfig: typ.Dict = yaml.safe_load(fp)
 	tcName: str = tcConfig["case-name"]
 	tctl, ttl = get_tctl_and_ttl(locjConfig, tsConfig, tcConfig)
@@ -193,7 +194,7 @@ def judge_test_case(
 	if isSingle:
 		transfer_single_test_case(tcName, extName, piTcPath, pcTcPath, sftp)
 	# compile and assemble on pc
-	resStatus, stderr = gen_exe(pcTcPath, tcName, tctl, extName, cargs, caExe, ssh, sftp)
+	resStatus, stderr = gen_exe(piTcPath, pcTcPath, tcName, tctl, extName, cargs, caExe, ssh, sftp)
 	# run test
 	if resStatus == TestStatus.AC:
 		tcRes = run_wrapper_and_get_res(piTcPath, pcTcPath, ttl, piPyPrefix, piLocjPath, ssh, sftp)
