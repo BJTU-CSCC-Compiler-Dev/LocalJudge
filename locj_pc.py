@@ -216,7 +216,13 @@ def judge_test_suite(
 		cargs: typ.List[str],
 		isSingle: bool, isUniv: bool,
 		caExe: typ.Optional[typ.List[str]] = None):
-	tsConfig: typ.Optional[typ.Dict] = None
+	with open(pcTsPath / "tsConfig.yaml", "r") as fp:
+		tsConfig: typ.Dict = yaml.safe_load(fp)
+	tcPaths: typ.List[str] = tsConfig["test-cases"]
+	tsRes = typ.List[typ.Dict] = list()
+	for pcTcPath in tcPaths:
+		tcRes = judge_test_case(Path(pcTcPath), locjConfig, cargs, isSingle, isUniv, tsConfig, caExe)
+		tsRes.append(tcRes)
 
 
 argParser = ArgumentParser(prog="locj_pc")

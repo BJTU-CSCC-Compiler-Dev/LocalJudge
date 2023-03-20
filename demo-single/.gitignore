@@ -1,0 +1,6 @@
+*
+!.gitignore
+!*.sy
+!*.in
+!*.ans
+!/**/tcInfo.yaml
